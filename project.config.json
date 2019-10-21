@@ -9,8 +9,8 @@
 	},
 	"compileType": "game",
 	"libVersion": "1.9.94",
-	"appid": "wx2b03c6e703f91276",
-	"projectname": "Bird",
+	"appid": "wx826eb470c7f703c8",
+	"projectname": "flappyBird",
 	"condition": {
 		"search": {
 			"current": -1,

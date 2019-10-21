@@ -3,11 +3,13 @@
 // 方便以后获取对应的路径
 
 // 数组的第一个元素对应Map的key，第二个元素对应value
-export const Resources=[
-    ['background','images/background.png'],
-    ['birds','images/birds.png'],
-    ['land','images/land.png'],
-    ['pieDown','images/pie_down.png'],
-    ['pieUp','images/pie_up.png'],
-    ['startButton','images/start_button.png']
-]
+export const Resources = [
+  ['background', 'images/background.png'],
+  ['birds', 'images/birds.png'],
+  ['land', 'images/land.png'],
+  ['pieDown', 'images/pie_down.png'],
+  ['pieUp', 'images/pie_up.png'],
+  ['startButton', 'images/start_button.png']
+];
+
+

@@ -1,4 +1,4 @@
-import { DataStore } from "./DataStore";
+import { DataStore } from "./DataStore.js";
 
 // 各种图片的父类
 
@@ -8,10 +8,10 @@ export class Sprite{
         const dataStore=DataStore.getInstance();
         this.ctx=dataStore.ctx;
         this.img=img; //图片
-        this.srcX=srcX; //起始坐标
+        this.srcX=srcX; //起始坐标                                                           
         this.srcY=srcY;
         this.srcW=srcW; //图片高
-        this.srcH=srcH;
+        this.srcH=srcH;                            
         this.x=x; //在画布上的坐标
         this.y=y;
         this.width=width; //画的宽

@@ -6,6 +6,8 @@ import { Background } from "./js/runtime/Background.js";
 import { Land } from "./js/runtime/Land.js";
 import { Director } from "./js/Director.js";
 import { Birds } from "./js/player/Birds.js";
+import { StartButton } from "./js/player/StartButton.js";
+import { Score } from "./js/player/Score.js";
 
 export class Main{
   constructor(){
@@ -42,6 +44,8 @@ export class Main{
   }
   // 游戏初始化，初始化游戏中的数据，将其保存在变量池中
   init(){
+    // 将游戏结束改为false
+    this.director.isGameover=false;
     // 模拟画背景图
     // new Background().draw()
     // new Land().draw()
@@ -49,9 +53,30 @@ export class Main{
                   .set('land', new Land())
                   .set('pipes', [])
                   .set('birds', new Birds())
+                  .set('startButton',new StartButton())
+                  .set('score',new Score())
+    // 调用单击事件的方法
+    this.gameEvent();
     // 先创建一组水管
     this.director.createPipes();
     // 开始运行
     this.director.run();
   }
+  // 绑定单击事件
+  gameEvent(){
+     this.canvas.addEventListener('touchstart',e=>{
+       if(this.director.isGameover){
+        // 游戏结束，点击重新开始
+        this.init();
+       }else{
+        // 游戏未结束，点击触发小鸟向上飞一段的距离
+        this.director.birdsUp();
+       }
+     })
+  }
+
+
+
+
+
 }

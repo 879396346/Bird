@@ -11,6 +11,8 @@
 	"libVersion": "1.9.94",
 	"appid": "wx826eb470c7f703c8",
 	"projectname": "flappyBird",
+	"simulatorType": "wechat",
+	"simulatorPluginLibVersion": {},
 	"condition": {
 		"search": {
 			"current": -1,

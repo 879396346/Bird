@@ -1,0 +1,433 @@
+﻿什么是微信小游戏：
+    基于微信平台开发，不需要下载安装即可使用的全新游戏应用，体现了“用完即走”的理念。
+    同时基于微信的社交属性让小游戏具备较强的社交传播力。
+
+小游戏的特点：
+    快速体验，用完即走（点击分享链接，扫描二维码等），不需要像手机APP要下载卸载
+    传统APP涉及大量窥探用户隐私的行为，而微信小游戏受微信限制，目前暂不存在窥探用户隐私
+    占用空间小
+    没有卸载残留的问题，充分节省用户的手机空间
+    开发周期短，维护升级快
+    不需要考虑手机的操作系统（安卓，苹果）
+    推广方便，朋友圈分享，群分享，二维码扫描等（传统APP需要与手机应用商城，应用管家等合作）
+    
+用户体验方面：
+    碎片化时间的消磨，随时随地玩一会（APP游戏升级，日常。。。）
+    与好友的联动比大部分APP方便
+
+缺点：
+    小，内容少，效果不如APP好，适合棋牌类，休闲类的游戏
+
+官网访问，账号的注册
+
+微信小程序开发平台的安装与使用
+
+
+
+
+小游戏的主要对象：
+	game.js
+		游戏全局的入口文件，是微信小游戏必须有的一个文件
+	Main.js
+		程序主类，主要用来初始化canvas和一些全局对象，各个精灵和绑定点击事件
+	Director.js
+		程序导演类，用来控制游戏的逻辑和精灵的创建与销毁，控制游戏主循环
+	DataStore.js
+		变量池，存储游戏需要长期保存的变量和需要定时销毁的变量
+	Resources.js
+		游戏的资源数组
+	ResourceLoader.js
+		资源加载器，保证游戏是在图片加载完成后开始主循环
+		图片加载完，canvas才开始渲染，否则canvas不会渲染到图片
+	Sprite.js
+		游戏精灵的基类，背景、陆地、铅笔、小鸟等都是它的子类
+	Background.js
+		背景类
+	Land.js
+		陆地类
+	UpPipe.js
+		上半部分水管
+	DownPipe.js
+		下半部分水管
+	Birds.js
+		小鸟
+	Score.js
+		计分器
+	StartButton.js
+		重新开始按钮
+
+项目结构：
+	/--
+		|--index.html
+		|--game.js
+		|--game.json
+		|--project.config.json
+		|--Main.js
+		|--res
+		|--js
+			|--Director.js
+			|--base
+				|--Resources.js
+				|--ResourceLoader.js
+				|--DataStore.js
+				|--Sprite.js
+			|--player
+				|--Birds.js
+				|--Score.js
+				|--StartButton.js
+			|--runtime
+				|--Background.js
+				|--Land.js
+				|--UpPipe.js
+				|--DownPipe.js
+
+1、新建index.html
+	设置index的基本样式
+	添加canvas节点，设置id及宽高(手机的尺寸)
+	引入game.js
+	在Main.js中暴露Main类，在其中定义构造方法
+		export class Main{
+			constructor(){
+				console.log('游戏主程序创建');
+			}
+		}
+	在game.js中引入Main.js，并创建Main对象。
+	启动服务，在浏览器中查看控制台的打印输出结果。
+
+2、加载图片资源
+	在Resources.js中定义资源数组并暴露
+		export const Resources = [
+			['background','res/background.png'],
+			['land','res/land.png'],
+			['pipeUp','res/pie_up.png'],
+			['pipeDown','res/pie_down.png'],
+			['birds','res/birds.png'],
+			['startButton','res/start_button.png']
+		];
+	在ResourceLoader.js中定义ResourceLoader类并暴露，在构造器中创建map集合(资源对象)
+	引入Resources。
+		export class ResourceLoader{
+			constructor(){
+				this.map = new Map(Resources);
+			}
+		}
+	遍历map集合，将其中的字符串分别替换为图片对象
+		for(let [key,val] of this.map){
+			const image = new Image();
+			image.src = val;
+			this.map.set(key,image);
+		}
+	定义加载资源完毕的方法，使用回调确保canvas是在加载完毕方法结束之后才开始渲染。
+		onloaded(callback){
+			let count = 0;
+			for( let val of this.map.values() ){
+				val.onload = ()=>{
+					count++;
+					if(count>=this.map.size){
+						callback(this.map);
+					}
+				}
+			}
+		}
+	定义静态方法create，返回一个实例对象ResourceLoader
+		static create(){
+			return new ResourceLoader();
+		}
+	在Main.js中获取canvas的ctx
+		创建图片对象，设置src属性，画图
+			img.src = './res/background.png';
+			this.ctx.drawImage(img,0,0,img.width,img.height,0,0,375,667);
+		图片显示失败：图片需要在加载完毕后才能显示
+			img.onload = ()=>{
+				this.ctx.drawImage(img,0,0,img.width,img.height,0,0,375,667);
+			}
+	引入ResourceLoader.js，调用create方法获取实例对象，调用onloaded方法
+		loader.onloaded(map=>{...});
+	因为回调函数中内容较多，将其提取封装为onResourceFirstLoaded方法
+		loader.onloaded(map=>this.onResourceFirstLoaded(map));
+
+3、变量的存取与控制
+	游戏中用到的变量，全部保存进变量池中，方便其他地方使用。
+	在DataStore.js中暴露DataStore
+	该变量池只有一个，所以要保证得到的实例对象也只有一个(使用单例)
+	构造中定义一个map集合，用于保存数据。
+		export class DataStore{
+			constructor(){
+				this.map = new Map();
+			}
+		}
+	定义静态方法getInstance，返回一个实例
+		static getInstance(){
+			if(!DataStore.instance){
+				DataStore.instance = new DataStore();
+			}
+			return DataStore.instance;
+		}
+	分别定义3个方法：存、取、清空
+		put(key,val){
+			this.map.set(key,val);
+			return this;
+		}
+		get(key){
+			return this.map.get(key);
+		}
+		destory(){
+			for( let val of this.map.values() ){
+				val = null;
+			}
+		}
+
+	在Main.js中引入DataStore，获取DataStore实例对象。
+	在第一次加载方法中，将一些对象保存进去。
+		this.dataStore.canvas = this.canvas;
+        this.dataStore.ctx = this.ctx;
+        this.dataStore.res = map;
+		注：不使用put方法保存的原因，put进去的对象游戏结束时会被销毁，
+			而这些对象在游戏结束时不销毁
+
+4、图片基类的定义
+	在Sprite.js中暴露。定义构造方法，初始化图片的基本数据。
+		constructor(img=null,srcX=0,srcY=0,srcW=0,srcH=0,x=0,y=0,width=0,height=0){
+			this.dataStore = DataStore.getInstance();
+			this.ctx = this.dataStore.ctx;
+			this.img = img;
+			this.srcX = srcX;
+			this.srcY = srcY;
+			this.srcW = srcW;
+			this.srcH = srcH;
+			this.x = x;
+			this.y = y;
+			this.width = width; 
+			this.height = height; 
+		}
+	定义画图的方法draw
+		draw(img=this.img,srcX=this.srcX,
+			srcY=this.srcY,srcW=this.srcW,
+			srcH=this.srcH,x=this.x,y=this.y,
+			width=this.width,height=this.height) {
+			this.ctx.drawImage(img,srcX,srcY,srcW,srcH,x,y,width,height);
+		}
+	定义获取图片的方法getImage
+		static getImage(key){
+			return DataStore.getInstance().res.get(key);
+		}
+
+5、背景类(Background.js)
+	继承图片基类，重写构造
+	通过Sprite的静态方法getImage获取背景图，再从变量池中获取canvas的宽高
+		constructor(){
+			const img = Sprite.getImage('background');
+			const width = DataStore.getInstance().canvas.width;
+			const height = DataStore.getInstance().canvas.height;
+			super(img,0,0,img.width,img.height,0,0,width,height);
+		}
+
+	在Main.js中第一次加载的方法中初始化background，调用draw方法，查看页面效果。
+	第一次加载方法应该是加载数据，画图应该放其他地方，定义init方法，将初始化的背景图put进变量池中
+		init(){
+			this.dataStore.put('background',new Background())
+		}
+	画图由Director.js的run方法执行：
+		Director中定义构造，获取变量池
+			constructor(){
+				this.dataStore = DataStore.getInstance();
+			}
+		定义静态方法获取Director对象(单例)
+			static getInstance(){
+				if(!Director.instance){
+					Director.instance = new Director();
+				}
+				return Director.instance;
+			}
+		定义run方法，从变量池中获取背景图并draw出来
+			run(){
+				this.dataStore.get('background').draw();
+			}
+	回到Main.js中，获取Director，并在init中调用run方法
+		init(){
+			this.dataStore.put('background',new Background())
+
+			this.director.run();
+		}
+
+6、陆地(Land.js)
+	画陆地，同时让陆地移动起来
+	陆地类继承Sprite，重写构造，添加自己的属性landX(水平坐标)和landSpeed(陆地移动速度)
+	Land中构造
+		constructor(){
+			const img = Sprite.getImage('land');
+			const height = DataStore.getInstance().canvas.height-img.height;
+			super(img,0,0,img.width,img.height,0,height,img.width,img.height);
+			this.landX = 0;
+			// this.landSpeed = 2; // 在Director中定义moveSpeed属性
+			this.landSpeed = Director.getInstance().moveSpeed;
+		}
+	Land重写draw方法，陆地的移动，需要不停的渲染，同时，判断图片是否移动结束，让其从头开始
+		draw(){
+			this.landX = this.landX + this.landSpeed;
+			if(this.landX>this.img.width-DataStore.getInstance().canvas.width){
+				this.landX = 0;
+			}
+			super.draw(this.img,this.srcX,this.srcY,this.srcW,this.srcH,-this.landX,this.y,this.width,this.height);
+		}
+	在Main中将Land对象put进去
+		init(){
+			this.dataStore
+						.put('background',new Background())
+						.put('land',new Land())
+			this.director.run();
+		}
+	Director中获取Land，调用draw方法
+		run(){
+			this.dataStore.get('background').draw();
+			this.dataStore.get('land').draw();
+		}
+	运行看效果，发现地板画了，但是没动——只渲染了一次，需要不停的渲染
+	在Director的run方法中调用requestAnimationFrame方法(也可以使用setInterval)，requestAnimationFrame方法能根据浏览器的帧率动态调整，性能优于setInterval
+	停止该方法，使用cancelAnimationFrame
+		run(){
+			this.dataStore.get('background').draw();
+			this.dataStore.get('land').draw();
+			let timer = requestAnimationFrame(()=>this.run());
+			this.dataStore.put('timer',timer);
+			// cancelAnimationFrame(timer);
+		}
+	查看效果，陆地移动
+
+7、水管
+	水管分上下两种，所以定义一个水管基类，继承Sprite
+	构造有两个参数：img与top
+	img表示水管的类型，上还是下
+	top表示水管离顶部的距离
+	构造方法：
+		constructor(img,top){
+			super(img,0,0,img.width,img.height,DataStore.getInstance().canvas.width,0,img.width,img.height);
+			this.top = top;
+			this.moveSpeed = Director.getInstance().moveSpeed;
+		}
+	重写draw方法
+		draw(){
+			this.x -= this.moveSpeed;
+			super.draw();
+		}
+	
+	定义class UpPipe，继承Pipe
+	构造传递top参数，img直接获取，重写构造
+		constructor(top){
+			const img = Sprite.getImage('pipeUp');
+			super(img,top);
+		}
+	重写draw方法
+		draw(){
+			this.y = this.top-this.height;
+			super.draw();
+		}
+	同理，定义下水管class DownPipe，继承Pipe
+	构造方法：
+		constructor(top){
+			const img = Sprite.getImage('pipeDown');
+			super(img,top);
+		}
+	draw方法：
+	上下俩水管之间有一个间隙gap
+		draw(){
+			let gap = DataStore.getInstance().canvas.height/5;
+			this.y = this.top+gap;
+			super.draw();
+		}
+	水管是同时出现上下两组共4个，以数组的方式保存到变量池：
+	Main.js中put水管pipes，一开始是空数组
+		this.dataStore
+			.put('background',new Background())
+			.put('land',new Land())
+			.put('pipes',[])
+	到Director中去创建水管：
+	定义专门创建水管的方法createPipes，在其中定义水管出现的最高高度与最低高度
+		createPipes(){
+			const minTop = DataStore.getInstance().canvas.height/8;
+			const maxTop = DataStore.getInstance().canvas.height/2;
+			const top = minTop + Math.random()*(maxTop - minTop);
+			this.dataStore.get('pipes').push(new UpPipe(top));
+			this.dataStore.get('pipes').push(new DownPipe(top));
+		}
+	run方法中调用该方法
+		在run方法中创建水管，创建水管之前，先判断：已创建的水管中是否有出界的，如果出界，从数组中删除。
+			const pipes = this.dataStore.get('pipes');
+			if(pipes[0].x+pipes[0].width<0 && pipes.length==4){
+				pipes.shift();
+				pipes.shift();
+			}
+		判断前一组水管是否已经越过屏幕的中央，如果越过，开始创建下一组水管。
+			if(pipes[0].x<(DataStore.getInstance().canvas.width-pipes[0].width)/2 && pipes.length==2){
+				this.createPipes();
+			}
+		遍历水管画图
+			pipes.forEach(function(p){
+				p.draw();
+			});
+		运行发现报错，报错原因：程序开始时没有水管，pipes数组是空的
+		所以要先调用一下创建水管的方法：
+		Main.js init方法：
+			this.director.createPipes();
+	程序正常运行，修改Director中画图顺序，让水管画在陆地的下面
+
+9、小鸟
+	Birds继承Sprite
+	构造中获取birds图片，重写父类构造，获取birds中每个部分
+		constructor(){
+			const img = Sprite.getImage('birds');
+			super(img,0,0,img.width,img.height,0,0,img.width,img.height);
+		}
+	在Main中put进birds，在Director中get birds并draw，查看小鸟能否画成功。
+
+	构造中，裁剪birds图片，获取birds飞行时的每个状态。
+		// 小鸟的宽是34，高是24，上下边距是10，左右边距是9
+        this.clippingX = [9,9+34+18,9+34+18+34+18];// 裁剪的x坐标
+        this.clippingY = [10,10,10];// 裁剪的y坐标
+        this.clippingWidth = [34,34,34];// 裁剪的宽度
+        this.clippingHeight = [24,24,24];// 裁剪的高度
+        const canvas = DataStore.getInstance().canvas;
+        const birdX = canvas.width/4; // 小鸟的初始坐标
+        this.birdsX = [birdX,birdX,birdX];
+        const birdY = canvas.height/2;
+        this.birdsY = [birdY,birdY,birdY];
+        this.birdsWidth = [34,34,34]; // 每个小鸟的宽度
+        this.birdsHeight = [24,24,24]; // 每个小鸟的高度
+        this.y = [birdY,birdY,birdY]; // 小鸟的实时y坐标
+        this.index = 0; // 切换小鸟，实现动态的效果
+        this.count = 0; // 计数器
+        this.time = 0; // 计时器，自由落体的时间
+	重写draw方法
+		const speed = 0.2;//切换三只小鸟的速度
+        this.count = this.count+speed;
+        if(this.index>=2){
+            this.count = 0;
+        }
+        this.index = Math.floor(this.count);
+		super.draw(this.img,this.clippingX[this.index],this.clippingY[this.index],
+            this.clippingWidth[this.index],this.clippingHeight[this.index],
+            this.birdsX[this.index],this.birdsY[this.index],
+            this.birdsWidth[this.index],this.birdsHeight[this.index]
+        );
+	此时，小鸟实现扇翅膀飞行的状态
+	添加自由落体运动及向上的位移
+		const g = 0.98/2.4;//模拟重力加速度
+        const offsetUp = 30;//向上的偏移量
+        const offsetY = (g*this.time*(this.time-offsetUp))/2;
+        for(let i=0;i<=2;i++){
+            this.birdsY[i] = this.y[i]+offsetY;
+        }
+        this.time++;
+
+
+
+
+
+
+
+
+
+
+
+
+

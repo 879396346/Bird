@@ -11,7 +11,6 @@ export class ResourceLoader{
     // 遍历集合map，将其中的字符串路径替换为img对象
     for(let [k,v] of this.map){
       // const img = new Image();
-
       const img = wx.createImage();
       img.src = v; // 将图片路径赋值给img的src属性
       // 将原来的字符串替换为img对象(重新设置k对应的值)

@@ -12,7 +12,7 @@ export class DownPipe extends Pipe{
 
   draw(){
     // gap表示上下水管的空隙
-    let gap = DataStore.getInstance().canvas.height/4;
+    let gap = DataStore.getInstance().canvas.height/5;
     this.y = this.top + gap;
     super.draw();
   }
